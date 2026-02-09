@@ -114,52 +114,7 @@ elif app_mode == "📊 Week 2: Deep EDA & Trends":
         st.plotly_chart(fig_box)
         
 
-elif app_mode == "⚙️ Week 3: Feature Engineering":
-    st.title("🛠️ Data Transformation & Feature Intelligence")
-    st.write("In Week 3, we move from looking at data to 'creating' intelligence for the AI.")
 
-    # --- 1. FEATURE CREATION LOGIC ---
-    fe_df = df.copy()
-    
-    # Date Decomposition (Time-based Features)
-    fe_df['MONTH'] = fe_df['ORDERDATE'].dt.month
-    fe_df['YEAR'] = fe_df['ORDERDATE'].dt.year
-    fe_df['QUARTER'] = fe_df['ORDERDATE'].dt.quarter
-    fe_df['DAY_OF_WEEK'] = fe_df['ORDERDATE'].dt.dayofweek
-    
-    # Categorical Encoding
-    le = LabelEncoder()
-    fe_df['DEAL_CODE'] = le.fit_transform(fe_df['DEALSIZE'])
-    fe_df['PROD_CODE'] = le.fit_transform(fe_df['PRODUCTLINE'])
-    fe_df['COUNTRY_CODE'] = le.fit_transform(fe_df['COUNTRY'])
-
-    # Feature Scaling (Standardization)
-    scaler = StandardScaler()
-    fe_df['SCALED_SALES'] = scaler.fit_transform(fe_df[['SALES']])
-
-    st.success(f"✅ Created 7 New Predictive Features from your {len(df)} records.")
-
-    # --- 2. MULTI-ANGLE ANALYSIS ---
-    col_a, col_b = st.columns(2)
-
-    with col_a:
-        st.subheader("1. Feature Correlation Matrix")
-        st.write("Identifying which engineered features drive revenue.")
-        # We use a larger set of columns for deeper analysis
-        corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']
-        fig_corr, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(fe_df[corr_cols].corr(), annot=True, cmap='RdYlGn', fmt=".2f", ax=ax)
-        st.pyplot(fig_corr)
-        
-
-    with col_b:
-        st.subheader("2. Target Normalization Check")
-        st.write("AI models perform better when data follows a Bell Curve.")
-        # Comparing Raw vs Log-Transformed
-        fig_dist = px.histogram(fe_df, x=np.log1p(fe_df['SALES']), 
-                               nbins=30, title="Log-Normalized Sales Distribution",
-                               color_discrete_sequence=['indianred'])
-        st.plotly_chart(fig_dist, use_container_width=True)
  elif app_mode == "⚙️ Week 3: Feature Engineering":
     st.title("🛠️ Data Transformation & Feature Intelligence")
     st.write("In Week 3, we move from looking at data to 'creating' intelligence for the AI.")
