@@ -357,68 +357,84 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
                 st.session_state.prediction_history = []
                 st.rerun()
 
-# 4. MASTER STRATEGIC REPORT (Diagnostic + Predictive)
+
+elif app_mode == "🚀 Week 6: Strategic Decision Support":
+    st.title("🏛️ Business Decision Command Center")
     st.markdown("---")
-    st.subheader("📋 Comprehensive Strategic Report")
+
+    # ==========================================
+    # 1. AUTOMATED DIAGNOSTIC ENGINE (Always Runs)
+    # ==========================================
+    # These calculations happen behind the scenes to power the dashboard
+    df['MONTH_VAL'] = df['ORDERDATE'].dt.month
+    monthly_sales = df.groupby('MONTH_VAL')['SALES'].sum()
     
-    if st.button("📊 Generate Full Business Case"):
-        # --- A. AUTOMATED DIAGNOSTICS (Pulling from Week 2/3 logic) ---
-        # 1. Seasonal Trend Detection (November Spike)
-        df['MONTH_VAL'] = df['ORDERDATE'].dt.month
-        monthly_avg = df.groupby('MONTH_VAL')['SALES'].sum()
-        nov_sales = monthly_avg.get(11, 0)
-        avg_sales_other = monthly_avg.mean()
-        nov_lift = ((nov_sales - avg_sales_other) / avg_sales_other) * 100 if avg_sales_other > 0 else 0
+    # Calculate November Lift vs average of other months
+    nov_sales = monthly_sales.get(11, 0)
+    avg_others = monthly_sales.drop(11).mean() if 11 in monthly_sales.index else monthly_sales.mean()
+    nov_lift = ((nov_sales - avg_others) / avg_others) * 100 if avg_others > 0 else 0
+    
+    peak_date = df.set_index('ORDERDATE')['SALES'].resample('M').sum().idxmax().strftime('%B %Y')
+    top_market = df.groupby('COUNTRY')['SALES'].sum().idxmax()
 
-        # 2. Performance Leaders
-        top_market = df.groupby('COUNTRY')['SALES'].sum().idxmax()
-        top_product = df.groupby('PRODUCTLINE')['SALES'].sum().idxmax()
-        peak_date = df.set_index('ORDERDATE')['SALES'].resample('M').sum().idxmax().strftime('%B %Y')
+    # ==========================================
+    # 2. EXECUTIVE KPI OVERVIEW
+    # ==========================================
+    st.subheader("📌 Current Performance & Historical Context")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
+    current_sales = df['SALES'].sum()
+    kpi1.metric("Gross Revenue", f"${current_sales/1e6:.2f}M")
+    kpi2.metric("Peak Month", peak_date)
+    kpi3.metric("Nov. Growth Trend", f"+{nov_lift:.1f}%", help="Sales surge observed every November")
+    kpi4.metric("Top Market", top_market)
 
-        # --- B. REPORT DISPLAY ---
-        st.write("### 📜 Consolidated Strategic Findings")
-        
-        rep_col1, rep_col2 = st.columns(2)
-        with rep_col1:
-            st.markdown(f"""
-            **Historical Diagnostics (The Evidence):**
-            * **Peak Month:** Historical records show highest velocity in **{peak_date}**.
-            * **Seasonal Surge:** November exhibits a **{nov_lift:.1f}% higher** sales volume than average.
-            * **Market Lead:** **{top_market}** is confirmed as the highest-yield region.
-            * **Product Anchor:** **{top_product}** drives core revenue.
-            """)
-        
-        with rep_col2:
-            st.markdown(f"""
-            **Simulated Strategy (The Recommendation):**
-            * **Growth Lever:** {prod_boost}% Inventory Increase / {price_adj}% Price Optimization.
-            * **Financial Goal:** Target Net Revenue gain of **${(revenue_diff - marketing_spend):,.2f}**.
-            * **Efficiency:** Strategy ROI is calculated at **{roi:.1f}%**.
-            * **Final Decision:** {action_plan}
-            """)
+    # ==========================================
+    # 3. STRATEGY SIMULATOR (The "What-If")
+    # ==========================================
+    st.markdown("---")
+    st.subheader("🛠️ Strategy Simulation: ROI Forecasting")
+    
+    col_s1, col_s2 = st.columns([1, 2])
+    with col_s1:
+        st.write("**Strategic Levers**")
+        prod_boost = st.slider("Production Volume Increase (%)", 0, 100, 20)
+        price_adj = st.slider("Price Optimization (%)", -10, 30, 5)
+        marketing_spend = st.number_input("Marketing Investment ($)", value=25000)
 
-        # --- C. MASTER DATA EXPORT ---
-        master_report_df = pd.DataFrame({
-            "Strategic Category": [
-                "Historical Peak Period", "November Seasonal Lift", "Top Performing Market", 
-                "Primary Product Line", "Simulation: Production Boost", 
-                "Simulation: Price Adjust", "Projected Net Gain", "Final ROI"
-            ],
-            "AI Finding / Parameter": [
-                peak_date, f"{nov_lift:.1f}%", top_market, 
-                top_product, f"{prod_boost}%", 
-                f"{price_adj}%", f"${(revenue_diff - marketing_spend):,.2f}", f"{roi:.1f}%"
-            ]
+    # Simulation Math
+    simulated_revenue = current_sales * (1 + (prod_boost/100)) * (1 + (price_adj/100))
+    revenue_diff = simulated_revenue - current_sales
+    net_gain = revenue_diff - marketing_spend
+    roi = (net_gain / marketing_spend * 100) if marketing_spend > 0 else 0
+
+    with col_s2:
+        comp_df = pd.DataFrame({
+            "Scenario": ["Current Status", "Target Strategy"],
+            "Revenue ($)": [current_sales, simulated_revenue]
         })
-        
-        st.table(master_report_df)
-        
-        # Download Logic
-        csv_master = master_report_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Full Strategic Report (CSV)",
-            data=csv_master,
-            file_name=f"Full_Business_Case_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-        st.balloons()
+        st.plotly_chart(px.bar(comp_df, x="Scenario", y="Revenue ($)", color="Scenario", text_auto='.3s'), use_container_width=True)
+
+    # ==========================================
+    # 4. FINAL STRATEGIC VERDICT
+    # ==========================================
+    st.markdown("---")
+    st.subheader("📋 Strategic Decision Summary")
+    
+    res_col1, res_col2 = st.columns(2)
+    with res_col1:
+        st.info(f"**Diagnostic Evidence:** The historical surge of **{nov_lift:.1f}%** in Q4 justifies a production boost of **{prod_boost}%** to prevent stockouts.")
+    with res_col2:
+        if roi > 15:
+            st.success(f"**Financial Verdict:** Strategy Approved. Projected Net Gain: **${net_gain:,.2f}** (ROI: {roi:.1f}%)")
+        else:
+            st.warning(f"**Financial Verdict:** Strategy Risk High. ROI of {roi:.1f}% is below the 15% threshold.")
+
+    # Export Button
+    if st.button("💾 Export Final Strategic Report"):
+        master_data = {
+            "Metric": ["Peak Period", "Nov Trend", "Top Region", "Vol Boost", "Price Adj", "Net Gain", "ROI"],
+            "Value": [peak_date, f"{nov_lift:.1f}%", top_market, f"{prod_boost}%", f"{price_adj}%", f"${net_gain:,.2f}", f"{roi:.1f}%"]
+        }
+        st.table(pd.DataFrame(master_data))
+        st.download_button("📥 Download PDF/CSV", pd.DataFrame(master_data).to_csv(index=False), "Strategy_Report.csv")
