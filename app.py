@@ -427,3 +427,58 @@ elif app_mode == "🚀 Week 6: Strategic Decision Support":
     with col_opp:
         st.subheader("💡 Expansion Opportunity")
         st.success(f"**Pricing Power:** A {p_change}% increase is sustainable in high-demand zones. Projected Margin expansion: ${growth/2/1e6:.2f}M.")
+        import streamlit as st
+import pandas as pd
+import plotly.express as px
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# 1. Page Configuration
+st.set_page_config(page_title="Business Decision Dashboard", layout="wide")
+st.title("📊 Predictive Analytics for Business Decisions")
+
+# 2. Data Loading
+uploaded_file = st.file_uploader("Upload your Business Data (CSV)", type="csv")
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    
+    # Sidebar Filters
+    st.sidebar.header("Filter Options")
+    columns = df.columns.tolist()
+    selected_col = st.sidebar.selectbox("Select Column for Trend Analysis", columns)
+
+    # 3. Key Metrics (KPIs)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Records", len(df))
+    col2.metric("Average Value", round(df[selected_col].mean(), 2) if df[selected_col].dtype in ['int64', 'float64'] else "N/A")
+    col3.metric("Unique Entries", df[selected_col].nunique())
+
+    # 4. Data Visualization
+    st.subheader(f"Trend Analysis: {selected_col}")
+    fig = px.line(df, y=selected_col, title=f"Historical Trend of {selected_col}")
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 5. Simple Predictive Analytics
+    st.divider()
+    st.subheader("🚀 Future Outcome Forecasting")
+    
+    if df[selected_col].dtype in ['int64', 'float64']:
+        # Preparing simple Linear Regression (Index vs Value)
+        X = np.array(range(len(df))).reshape(-1, 1)
+        y = df[selected_col].values
+        
+        model = LinearRegression()
+        model.fit(X, y)
+        
+        # Predict next 5 steps
+        future_steps = np.array(range(len(df), len(df) + 5)).reshape(-1, 1)
+        predictions = model.predict(future_steps)
+        
+        st.write("Based on current trends, the next 5 projected values are:")
+        st.dataframe(pd.DataFrame(predictions, columns=["Projected Value"]))
+    else:
+        st.warning("Please select a numerical column to generate a forecast.")
+
+else:
+    st.info("Please upload a CSV file to get started.")
