@@ -357,96 +357,68 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
                 st.session_state.prediction_history = []
                 st.rerun()
 
-elif app_mode == "🚀 Week 6: Strategic Decision Support":
-    st.title("🏛️ Business Decision Command Center")
+# 4. MASTER STRATEGIC REPORT (Diagnostic + Predictive)
     st.markdown("---")
-
-    # 1. EXECUTIVE KPI OVERVIEW
-    st.subheader("📌 Current Performance vs. AI Targets")
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    st.subheader("📋 Comprehensive Strategic Report")
     
-    current_sales = df['SALES'].sum()
-    target_sales = current_sales * 1.15
-    avg_order = df['SALES'].mean()
-    
-    kpi1.metric("Current Revenue", f"${current_sales/1e6:.2f}M")
-    kpi2.metric("Projected Target", f"${target_sales/1e6:.2f}M", delta="15% Growth")
-    kpi3.metric("Avg Order Value", f"${avg_order:,.0f}")
-    kpi4.metric("AI Confidence", "92%", delta="Stable")
+    if st.button("📊 Generate Full Business Case"):
+        # --- A. AUTOMATED DIAGNOSTICS (Pulling from Week 2/3 logic) ---
+        # 1. Seasonal Trend Detection (November Spike)
+        df['MONTH_VAL'] = df['ORDERDATE'].dt.month
+        monthly_avg = df.groupby('MONTH_VAL')['SALES'].sum()
+        nov_sales = monthly_avg.get(11, 0)
+        avg_sales_other = monthly_avg.mean()
+        nov_lift = ((nov_sales - avg_sales_other) / avg_sales_other) * 100 if avg_sales_other > 0 else 0
 
-    # 2. INTERACTIVE STRATEGY SIMULATOR
-    st.markdown("---")
-    st.subheader("🛠️ Strategy Simulation: 'What-If' Analysis")
-    
-    col_s1, col_s2 = st.columns([1, 2])
-    with col_s1:
-        st.write("**Adjust Growth Levers**")
-        prod_boost = st.slider("Increase Production Volume (%)", 0, 50, 10)
-        price_adj = st.slider("Price Optimization (%)", -10, 20, 5)
-        marketing_spend = st.number_input("Marketing Investment ($)", value=50000, step=5000)
+        # 2. Performance Leaders
+        top_market = df.groupby('COUNTRY')['SALES'].sum().idxmax()
+        top_product = df.groupby('PRODUCTLINE')['SALES'].sum().idxmax()
+        peak_date = df.set_index('ORDERDATE')['SALES'].resample('M').sum().idxmax().strftime('%B %Y')
 
-    # Simulation Logic
-    simulated_revenue = current_sales * (1 + (prod_boost/100)) * (1 + (price_adj/100))
-    revenue_diff = simulated_revenue - current_sales
-    roi = ((revenue_diff - marketing_spend) / marketing_spend) * 100 if marketing_spend > 0 else 0
+        # --- B. REPORT DISPLAY ---
+        st.write("### 📜 Consolidated Strategic Findings")
+        
+        rep_col1, rep_col2 = st.columns(2)
+        with rep_col1:
+            st.markdown(f"""
+            **Historical Diagnostics (The Evidence):**
+            * **Peak Month:** Historical records show highest velocity in **{peak_date}**.
+            * **Seasonal Surge:** November exhibits a **{nov_lift:.1f}% higher** sales volume than average.
+            * **Market Lead:** **{top_market}** is confirmed as the highest-yield region.
+            * **Product Anchor:** **{top_product}** drives core revenue.
+            """)
+        
+        with rep_col2:
+            st.markdown(f"""
+            **Simulated Strategy (The Recommendation):**
+            * **Growth Lever:** {prod_boost}% Inventory Increase / {price_adj}% Price Optimization.
+            * **Financial Goal:** Target Net Revenue gain of **${(revenue_diff - marketing_spend):,.2f}**.
+            * **Efficiency:** Strategy ROI is calculated at **{roi:.1f}%**.
+            * **Final Decision:** {action_plan}
+            """)
 
-    with col_s2:
-        # Comparison Chart
-        comparison_df = pd.DataFrame({
-            "Scenario": ["Current Status", "AI Simulated Strategy"],
-            "Revenue ($)": [current_sales, simulated_revenue]
+        # --- C. MASTER DATA EXPORT ---
+        master_report_df = pd.DataFrame({
+            "Strategic Category": [
+                "Historical Peak Period", "November Seasonal Lift", "Top Performing Market", 
+                "Primary Product Line", "Simulation: Production Boost", 
+                "Simulation: Price Adjust", "Projected Net Gain", "Final ROI"
+            ],
+            "AI Finding / Parameter": [
+                peak_date, f"{nov_lift:.1f}%", top_market, 
+                top_product, f"{prod_boost}%", 
+                f"{price_adj}%", f"${(revenue_diff - marketing_spend):,.2f}", f"{roi:.1f}%"
+            ]
         })
-        fig_sim = px.bar(comparison_df, x="Scenario", y="Revenue ($)", 
-                         color="Scenario", text_auto='.2s',
-                         color_discrete_map={"Current Status": "#636EFA", "AI Simulated Strategy": "#EF553B"})
-        st.plotly_chart(fig_sim, use_container_width=True)
-
-    # 3. GLOBAL DECISION MATRIX & ACTION ITEMS
-    st.markdown("---")
-    col_m1, col_m2 = st.columns([2, 1])
-    
-    with col_m1:
-        st.subheader("🌍 Regional Resource Allocation")
-        market_readiness = df.groupby('COUNTRY')['SALES'].sum().reset_index().sort_values('SALES', ascending=False).head(6)
         
-        m_cols = st.columns(3)
-        for i, (idx, row) in enumerate(market_readiness.iterrows()):
-            with m_cols[i % 3]:
-                st.info(f"**{row['COUNTRY']}**")
-                st.write(f"Volume: {row['SALES']/1e3:.1f}K")
-                if row['SALES'] > 500000:
-                    st.success("Priority: High")
-                else:
-                    st.warning("Priority: Medium")
-                st.button("Approve Budget", key=f"btn_w6_{row['COUNTRY']}")
-
-    with col_m2:
-        st.subheader("🚨 Risk Assessment")
-        if price_adj > 10:
-            st.error("Churn Risk: High pricing may reduce volume by 5%.")
-        if prod_boost > 30:
-            st.warning("Supply Chain: Potential stock bottlenecks in Q4.")
-        st.metric("Estimated ROI", f"{roi:.1f}%")
-
-    # 4. FINAL EXECUTIVE SUMMARY & DOWNLOAD
-    st.markdown("---")
-    st.subheader("📋 Executive Action Plan")
-    
-    # Prescriptive Logic
-    if roi > 20:
-        action_plan = "🟢 STRATEGY APPROVED: High ROI detected. Proceed with global roll-out."
-    else:
-        action_plan = "🟡 STRATEGY PENDING: Low ROI. Re-evaluate marketing spend vs. price optimization."
-    
-    st.markdown(f"> **Final Recommendation:** {action_plan}")
-
-    if st.button("📊 Finalize & Export Strategy"):
-        report_data = {
-            "Factor": ["Production Boost", "Price Optimization", "Marketing Spend", "Projected Net Gain", "ROI"],
-            "Value": [f"{prod_boost}%", f"{price_adj}%", f"${marketing_spend:,.0f}", f"${revenue_diff - marketing_spend:,.2f}", f"{roi:.1f}%"]
-        }
-        res_df = pd.DataFrame(report_data)
-        st.table(res_df)
+        st.table(master_report_df)
         
-        csv = res_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Official Strategy PDF/CSV", data=csv, file_name="Business_Strategy_2026.csv")
+        # Download Logic
+        csv_master = master_report_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Full Strategic Report (CSV)",
+            data=csv_master,
+            file_name=f"Full_Business_Case_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+        st.balloons()
