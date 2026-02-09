@@ -283,25 +283,26 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
                               line=dict(color="Red", dash="dash"))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- STEP 5: LIVE PREDICTION CALCULATOR ---
+   # --- STEP 5: ADVANCED PREDICTION INSIGHTS ---
     st.divider()
-    st.subheader("🔮 Live Prediction Simulator")
-    st.write("Adjust the values below to see what the AI predicts the Sales Price will be.")
+    st.subheader("🔮 Smart Sales Predictor")
+    st.write("Adjust inputs to see how the AI forecasts revenue compared to historical averages.")
 
-    p1, p2, p3, p4, p5 = st.columns(5)
-    
-    with p1:
-        input_qty = st.number_input("Quantity", value=30)
-    with p2:
-        input_price = st.number_input("Price Each", value=100.0)
-    with p3:
-        input_pline = st.selectbox("Product Line", df['PRODUCTLINE'].unique())
-    with p4:
-        input_country = st.selectbox("Country", df['COUNTRY'].unique())
-    with p5:
-        input_deal = st.selectbox("Deal Size", df['DEALSIZE'].unique())
+    # Input Section
+    with st.container():
+        p1, p2, p3, p4, p5 = st.columns(5)
+        with p1:
+            input_qty = st.number_input("📦 Quantity", value=30)
+        with p2:
+            input_price = st.number_input("💵 Price Each", value=100.0)
+        with p3:
+            input_pline = st.selectbox("🏎️ Product Line", df['PRODUCTLINE'].unique())
+        with p4:
+            input_country = st.selectbox("🌍 Country", df['COUNTRY'].unique())
+        with p5:
+            input_deal = st.selectbox("📏 Deal Size", df['DEALSIZE'].unique())
 
-    # Convert user inputs using the saved encoders
+    # Calculate Prediction
     user_input = pd.DataFrame([[
         input_qty, 
         input_price, 
@@ -309,13 +310,58 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
         encoders['COUNTRY'].transform([input_country])[0],
         encoders['DEALSIZE'].transform([input_deal])[0]
     ]], columns=X.columns)
+    
+    final_pred = model.predict(user_input)[0]
 
-    if st.button("Calculate Predicted Sales"):
-        final_pred = model.predict(user_input)
-        st.info(f"### Predicted Sales Value: ${final_pred[0]:,.2f}")
-     
+    # --- ADVANCED UI STARTS HERE ---
+    st.markdown("---")
+    res_col1, res_col2 = st.columns([1, 2])
 
+    with res_col1:
+        st.write("### Prediction Result")
+        # Display the result in a big, colorful metric card
+        avg_sales = df['SALES'].mean()
+        diff = final_pred - avg_sales
+        
+        st.metric(
+            label="Forecasted Revenue", 
+            value=f"${final_pred:,.2f}", 
+            delta=f"{diff:,.2f} vs Avg",
+            delta_color="normal"
+        )
+        
+        # Simple AI Summary
+        if final_pred > avg_sales:
+            st.success("✨ This is a **High Value** transaction compared to our usual deals.")
+        else:
+            st.info("ℹ️ This transaction is within the **Standard Value** range.")
 
+    with res_col2:
+        # Create a Gauge Chart using Plotly
+        import plotly.graph_objects as go
+        
+        fig_gauge = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = final_pred,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "Revenue Scale ($)", 'font': {'size': 18}},
+            gauge = {
+                'axis': {'range': [df['SALES'].min(), df['SALES'].max()], 'tickwidth': 1},
+                'bar': {'color': "#1f77b4"},
+                'steps': [
+                    {'range': [0, 3000], 'color': "#e8f8f5"}, # Small
+                    {'range': [3000, 7000], 'color': "#d1f2eb"}, # Medium
+                    {'range': [7000, df['SALES'].max()], 'color': "#a3e4d7"} # Large
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': final_pred
+                }
+            }
+        ))
+        fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=50, b=20))
+        st.plotly_chart(fig_gauge, use_container_width=True)
 
 
 # ==========================================
