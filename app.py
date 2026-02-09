@@ -113,78 +113,109 @@ elif app_mode == "📊 Week 2: Deep EDA & Trends":
         fig_box = px.box(df, x='PRODUCTLINE', y='SALES', color='PRODUCTLINE')
         st.plotly_chart(fig_box)
         
-
-
- elif app_mode == "⚙️ Week 3: Feature Engineering":
+elif app_mode == "⚙️ Week 3: Feature Engineering":
     st.title("🛠️ Data Transformation & Feature Intelligence")
-    st.write("In Week 3, we move from looking at data to 'creating' intelligence for the AI.")
+    st.markdown("""
+    **Phase Objective:** In Week 3, we move from observation to creation. We transform raw sales records 
+    into mathematical 'signals' that a Machine Learning model can understand.
+    """)
 
     # --- 1. FEATURE CREATION LOGIC ---
     fe_df = df.copy()
     
-    # Date Decomposition (Time-based Features)
+    # Date Decomposition (Extracting Seasonality)
     fe_df['MONTH'] = fe_df['ORDERDATE'].dt.month
     fe_df['YEAR'] = fe_df['ORDERDATE'].dt.year
     fe_df['QUARTER'] = fe_df['ORDERDATE'].dt.quarter
     fe_df['DAY_OF_WEEK'] = fe_df['ORDERDATE'].dt.dayofweek
+    fe_df['IS_MONTH_END'] = fe_df['ORDERDATE'].dt.is_month_end.astype(int)
     
-    # Categorical Encoding
+    # Categorical Encoding (Transforming Text to Numbers)
     le = LabelEncoder()
     fe_df['DEAL_CODE'] = le.fit_transform(fe_df['DEALSIZE'])
     fe_df['PROD_CODE'] = le.fit_transform(fe_df['PRODUCTLINE'])
     fe_df['COUNTRY_CODE'] = le.fit_transform(fe_df['COUNTRY'])
+    fe_df['STATUS_CODE'] = le.fit_transform(fe_df['STATUS'])
 
-    # Feature Scaling (Standardization)
+    # Statistical Transformations
+    fe_df['SALES_LOG'] = np.log1p(fe_df['SALES'])
     scaler = StandardScaler()
-    fe_df['SCALED_SALES'] = scaler.fit_transform(fe_df[['SALES']])
+    fe_df['SCALED_QUANTITY'] = scaler.fit_transform(fe_df[['QUANTITYORDERED']])
 
-    st.success(f"✅ Created 7 New Predictive Features from your {len(df)} records.")
+    st.success(f"✅ Created {len(fe_df.columns) - len(df.columns)} New Predictive Features for the AI Engine.")
 
-    # --- 2. MULTI-ANGLE ANALYSIS ---
-    col_a, col_b = st.columns(2)
+    # --- 2. MULTI-ANGLE ANALYSIS DASHBOARD ---
+    col_a, col_b = st.columns([1.2, 0.8])
 
     with col_a:
         st.subheader("1. Feature Correlation Matrix")
-        st.write("Identifying which engineered features drive revenue.")
-        # We use a larger set of columns for deeper analysis
-        corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']
+        st.write("Visualizing the relationship between engineered features and Revenue.")
+        # Expanded column list for deeper insight
+        corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 
+                     'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE', 'STATUS_CODE']
+        
         fig_corr, ax = plt.subplots(figsize=(10, 8))
         sns.heatmap(fe_df[corr_cols].corr(), annot=True, cmap='RdYlGn', fmt=".2f", ax=ax)
+        plt.title("Pearson Correlation Heatmap")
         st.pyplot(fig_corr)
         
 
     with col_b:
-        st.subheader("2. Target Normalization Check")
-        st.write("AI models perform better when data follows a Bell Curve.")
-        # Comparing Raw vs Log-Transformed
-        fig_dist = px.histogram(fe_df, x=np.log1p(fe_df['SALES']), 
-                               nbins=30, title="Log-Normalized Sales Distribution",
-                               color_discrete_sequence=['indianred'])
+        st.subheader("2. Target Normalization")
+        st.write("AI models require a 'Bell Curve' for high accuracy.")
+        
+        # Overlay plot comparing original vs transformed
+        fig_dist = px.histogram(fe_df, x='SALES_LOG', nbins=30, 
+                               title="Log-Normalized Sales Distribution",
+                               color_discrete_sequence=['#636EFA'],
+                               marginal="box")
         st.plotly_chart(fig_dist, use_container_width=True)
         
 
     # --- 3. ADVANCED STATISTICAL ANGLES ---
     st.markdown("---")
     st.subheader("3. Seasonal Revenue Decomposition")
+    st.write("This angle proves why the 'MONTH' feature is critical for forecasting.")
     
-    # Aggregate data to show the effect of the new 'MONTH' feature
-    seasonal_data = fe_df.groupby('MONTH')['SALES'].mean().reset_index()
-    fig_seasonal = px.area(seasonal_data, x='MONTH', y='SALES', 
-                          title="Mean Sales by Engineered Month Feature",
-                          labels={'SALES': 'Average Revenue ($)'})
+    seasonal_data = fe_df.groupby(['YEAR', 'MONTH'])['SALES'].sum().reset_index()
+    fig_seasonal = px.area(seasonal_data, x='MONTH', y='SALES', color='YEAR',
+                          title="Revenue Velocity by Year/Month Feature",
+                          labels={'SALES': 'Monthly Revenue ($)'},
+                          line_group='YEAR')
     st.plotly_chart(fig_seasonal, use_container_width=True)
 
-    # --- 4. FEATURE IMPORTANCE (SNEAK PEEK) ---
-    st.subheader("4. Information Gain (Feature Impact)")
-    # Using a quick random forest to show which feature is most "valuable"
-    X_temp = fe_df[['QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE']]
-    y_temp = fe_df['SALES']
-    from sklearn.ensemble import ExtraTreesRegressor
-    model_temp = ExtraTreesRegressor()
-    model_temp.fit(X_temp, y_temp)
+    # --- 4. DATA QUALITY & NULL ANALYSIS ---
+    st.markdown("---")
+    col_c, col_d = st.columns(2)
     
-    feat_importances = pd.Series(model_temp.feature_importances_, index=X_temp.columns)
-    st.plotly_chart(px.bar(feat_importances, orientation='h', title="Statistical Value of New Features"), use_container_width=True)       
+    with col_c:
+        st.subheader("4. Information Gain (Feature Impact)")
+        # Calculate Feature Importance via ExtraTrees
+        X_tmp = fe_df[['QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']]
+        y_tmp = fe_df['SALES']
+        from sklearn.ensemble import ExtraTreesRegressor
+        et_model = ExtraTreesRegressor()
+        et_model.fit(X_tmp, y_tmp)
+        
+        feat_imp = pd.Series(et_model.feature_importances_, index=X_tmp.columns).sort_values()
+        fig_imp = px.bar(feat_imp, orientation='h', title="Statistical Value of Engineered Features",
+                        color_discrete_sequence=['#00CC96'])
+        st.plotly_chart(fig_imp, use_container_width=True)
+        
+
+    with col_d:
+        st.subheader("5. Feature Variance Check")
+        st.write("Descriptive statistics for the newly created features.")
+        st.dataframe(fe_df[['MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']].describe().T)
+
+    # --- 5. CONCLUSION OF WEEK 3 ---
+    st.info("""
+    **Conclusion for Week 3:** By decomposing dates and encoding categories, we have transformed 
+    raw text into a multidimensional numerical space. This allows the Random Forest model (Week 4) 
+    to recognize that **November sales spikes** are recurring patterns rather than random outliers.
+    """)
+
+     
 
 
 
