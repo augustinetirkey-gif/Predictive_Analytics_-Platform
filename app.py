@@ -214,53 +214,109 @@ elif app_mode == "⚙️ Week 3: Feature Engineering":
     raw text into a multidimensional numerical space. This allows the Random Forest model (Week 4) 
     to recognize that **November sales spikes** are recurring patterns rather than random outliers.
     """)
-
-     
-
-
-
-# ==========================================
-# 🤖 TAB 4 & 5: WEEK 4/5 - AI MODELS
-# ==========================================
 elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
     st.title("AI Model Building & Evaluation")
     
-    # Preprocessing for Modeling
-    le = LabelEncoder()
+    # --- STEP 1: PREPROCESSING ---
+    # We store the encoders so we can use them for the "Live Predictor" later
     model_df = df.copy()
-    model_df['DEALSIZE'] = le.fit_transform(model_df['DEALSIZE'])
-    model_df['PRODUCTLINE'] = le.fit_transform(model_df['PRODUCTLINE'])
-    model_df['COUNTRY'] = le.fit_transform(model_df['COUNTRY'])
-    
+    encoders = {}
+    for col in ['DEALSIZE', 'PRODUCTLINE', 'COUNTRY']:
+        le = LabelEncoder()
+        model_df[col] = le.fit_transform(model_df[col])
+        encoders[col] = le # Save for later use
+
     X = model_df[['QUANTITYORDERED', 'PRICEEACH', 'PRODUCTLINE', 'COUNTRY', 'DEALSIZE']]
     y = model_df['SALES']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Model Selection
+    # --- STEP 2: MODEL SELECTION ---
     model_choice = st.selectbox("Select Model to Train:", ["Random Forest Regressor", "Linear Regression", "Gradient Boosting"])
     
     if model_choice == "Random Forest Regressor":
-        model = RandomForestRegressor(n_estimators=100)
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
     elif model_choice == "Linear Regression":
         model = LinearRegression()
     else:
-        model = GradientBoostingRegressor()
+        model = GradientBoostingRegressor(random_state=42)
 
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
 
-    # Evaluation Metrics
-    st.subheader("Model Performance Metrics")
+    # --- STEP 3: METRICS WITH EXPLANATIONS ---
+    st.subheader("📊 Model Performance Metrics")
     e1, e2, e3 = st.columns(3)
-    e1.metric("MAE", f"{mean_absolute_error(y_test, preds):,.2f}")
-    e2.metric("RMSE", f"{np.sqrt(mean_squared_error(y_test, preds)):,.2f}")
-    e3.metric("R² Score", f"{r2_score(y_test, preds):.4f}")
+    
+    mae = mean_absolute_error(y_test, preds)
+    rmse = np.sqrt(mean_squared_error(y_test, preds))
+    r2 = r2_score(y_test, preds)
 
-    # Feature Importance
-    if hasattr(model, 'feature_importances_'):
-        imp_df = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values('Importance')
-        st.plotly_chart(px.bar(imp_df, x='Importance', y='Feature', orientation='h', title="Prediction Drivers"))
-        
+    e1.metric("MAE (Avg Error)", f"${mae:,.2f}", help="On average, the prediction is off by this amount.")
+    e2.metric("RMSE (Outlier Penalty)", f"${rmse:,.2f}", help="Higher value means the model is making some big mistakes on specific deals.")
+    e3.metric("R² Score (Accuracy)", f"{r2:.4f}", help="How much of the data patterns the AI understands. Closer to 1.0 is better.")
+
+    # Simple logic-check message for the user
+    if r2 > 0.80:
+        st.success(f"✅ Excellent! This model explains {r2*100:.1f}% of the sales variation.")
+    else:
+        st.warning("⚠️ The model accuracy is moderate. Try cleaning more outliers.")
+
+    # --- STEP 4: VISUALIZING ACCURACY ---
+    st.divider()
+    c1, c2 = st.columns(2)
+
+    with c1:
+        # 1. Feature Importance
+        if hasattr(model, 'feature_importances_'):
+            imp_df = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values('Importance')
+            st.plotly_chart(px.bar(imp_df, x='Importance', y='Feature', orientation='h', title="What drives the Price?"), use_container_width=True)
+    
+    with c2:
+        # 2. Actual vs Predicted Chart
+        test_results = pd.DataFrame({'Actual': y_test, 'Predicted': preds})
+        fig_scatter = px.scatter(test_results, x='Actual', y='Predicted', 
+                                 title="Actual Sales vs. AI Prediction",
+                                 labels={'Actual': 'Real Value ($)', 'Predicted': 'AI Guess ($)'},
+                                 opacity=0.5)
+        # Add a "Perfect Prediction" line
+        fig_scatter.add_shape(type="line", x0=y_test.min(), y0=y_test.min(), x1=y_test.max(), y1=y_test.max(), 
+                              line=dict(color="Red", dash="dash"))
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # --- STEP 5: LIVE PREDICTION CALCULATOR ---
+    st.divider()
+    st.subheader("🔮 Live Prediction Simulator")
+    st.write("Adjust the values below to see what the AI predicts the Sales Price will be.")
+
+    p1, p2, p3, p4, p5 = st.columns(5)
+    
+    with p1:
+        input_qty = st.number_input("Quantity", value=30)
+    with p2:
+        input_price = st.number_input("Price Each", value=100.0)
+    with p3:
+        input_pline = st.selectbox("Product Line", df['PRODUCTLINE'].unique())
+    with p4:
+        input_country = st.selectbox("Country", df['COUNTRY'].unique())
+    with p5:
+        input_deal = st.selectbox("Deal Size", df['DEALSIZE'].unique())
+
+    # Convert user inputs using the saved encoders
+    user_input = pd.DataFrame([[
+        input_qty, 
+        input_price, 
+        encoders['PRODUCTLINE'].transform([input_pline])[0],
+        encoders['COUNTRY'].transform([input_country])[0],
+        encoders['DEALSIZE'].transform([input_deal])[0]
+    ]], columns=X.columns)
+
+    if st.button("Calculate Predicted Sales"):
+        final_pred = model.predict(user_input)
+        st.info(f"### Predicted Sales Value: ${final_pred[0]:,.2f}")
+     
+
+
+
 
 # ==========================================
 # 🚀 TAB 5: WEEK 6 - STRATEGIC ACTION
