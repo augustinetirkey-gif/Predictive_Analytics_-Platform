@@ -283,66 +283,79 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
                               line=dict(color="Red", dash="dash"))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-# --- STEP 5: 10-SECOND DECISION ENGINE ---
+# --- STEP 5: PRO DECISION ENGINE (Multi-Compare & History) ---
     st.divider()
-    st.subheader("🚀 10-Second Deal Intelligence")
-    
-    # 1. Quick Inputs
-    p1, p2, p3, p4, p5 = st.columns(5)
+    st.subheader("🚀 Global Deal Intelligence & History")
+
+    # 1. Setup Session State for History (This remembers your past predictions)
+    if 'prediction_history' not in st.session_state:
+        st.session_state.prediction_history = []
+
+    # 2. Quick Inputs (Top Row)
+    p1, p2, p3 = st.columns([1, 1, 2])
     with p1: input_qty = st.number_input("Quantity", value=30)
     with p2: input_price = st.number_input("Price Each", value=100.0)
-    with p3: input_pline = st.selectbox("Product", df['PRODUCTLINE'].unique())
-    with p4: input_country = st.selectbox("Country", df['COUNTRY'].unique())
-    with p5: input_deal = st.selectbox("Size", df['DEALSIZE'].unique())
+    with p3: input_pline = st.selectbox("Product Line", df['PRODUCTLINE'].unique())
+    
+    # 3. Multi-Country Selection (This solves your "forgetting" problem)
+    # Allow user to pick many countries at once
+    selected_countries = st.multiselect(
+        "Select Countries to Compare:", 
+        options=df['COUNTRY'].unique(),
+        default=[df['COUNTRY'].unique()[0]] # Default to the first one
+    )
+    
+    input_deal = st.radio("Select Deal Size Context:", df['DEALSIZE'].unique(), horizontal=True)
 
-    # 2. The AI "Think" (Processing)
-    user_input = pd.DataFrame([[
-        input_qty, input_price, 
-        encoders['PRODUCTLINE'].transform([input_pline])[0],
-        encoders['COUNTRY'].transform([input_country])[0],
-        encoders['DEALSIZE'].transform([input_deal])[0]
-    ]], columns=X.columns)
-    
-    final_pred = model.predict(user_input)[0]
-    avg_sales = df['SALES'].mean()
-    
-    # 3. Decision Logic (The "Brain")
-    # We calculate a score out of 100 based on how it compares to the average
-    deal_score = min(100, int((final_pred / avg_sales) * 50)) 
-    
-    st.markdown("---")
-    
-    # 4. THE 10-SECOND DECISION CARD
-    if final_pred > (avg_sales * 1.2): # 20% above average
-        status = "🟢 HIGH PRIORITY DEAL"
-        color = "green"
-        action = "APPROVE IMMEDIATELY - This is a top-tier revenue generator."
-    elif final_pred > avg_sales:
-        status = "🟡 STANDARD DEAL"
-        color = "orange"
-        action = "PROCEED - This deal meets company averages."
-    else:
-        status = "🔴 LOW MARGIN ALERT"
-        color = "red"
-        action = "RENEGOTIATE - This deal is below our profit threshold."
+    if st.button("⚡ Run Global Analysis"):
+        results = []
+        avg_sales = df['SALES'].mean()
 
-    # Displaying the Decision
-    cols = st.columns([1, 1, 2])
-    
-    with cols[0]:
-        st.write("### Deal Score")
-        st.title(f"{deal_score}/100")
-        
-    with cols[1]:
-        st.write("### Forecast")
-        st.title(f"${final_pred:,.0f}")
+        # 4. Loop through all selected countries and predict
+        for country in selected_countries:
+            # Prepare data
+            user_input = pd.DataFrame([[
+                input_qty, input_price, 
+                encoders['PRODUCTLINE'].transform([input_pline])[0],
+                encoders['COUNTRY'].transform([country])[0],
+                encoders['DEALSIZE'].transform([input_deal])[0]
+            ]], columns=X.columns)
+            
+            pred = model.predict(user_input)[0]
+            
+            # Logic for Status
+            if pred > (avg_sales * 1.2): status, icon = "High Priority", "🟢"
+            elif pred > avg_sales: status, icon = "Standard", "🟡"
+            else: status, icon = "Low Margin", "🔴"
+            
+            # Save to temporary results
+            res_dict = {
+                "Country": country,
+                "Predicted Sales": f"${pred:,.2f}",
+                "Status": f"{icon} {status}",
+                "Deal Size": input_deal,
+                "Product": input_pline
+            }
+            results.append(res_dict)
+            
+            # Also save to Global History (Session State)
+            st.session_state.prediction_history.insert(0, res_dict)
 
-    with cols[2]:
-        st.write(f"### Decision: {status}")
-        st.markdown(f"**Action Item:** {action}")
-        
-    # Visual Progress Bar for the score
-    st.progress(deal_score / 100)
+        # 5. Display Comparison Table for current click
+        st.write("### 📊 Current Comparison")
+        st.table(pd.DataFrame(results))
+
+    # 6. THE HISTORY LOG (This ensures you never forget past ones)
+    if st.session_state.prediction_history:
+        st.divider()
+        with st.expander("📜 View All Prediction History", expanded=False):
+            st.write("This list keeps track of every scenario you have tested in this session.")
+            history_df = pd.DataFrame(st.session_state.prediction_history)
+            st.dataframe(history_df, use_container_width=True)
+            
+            if st.button("Clear History"):
+                st.session_state.prediction_history = []
+                st.rerun()
 
 
 # ==========================================
