@@ -48,7 +48,7 @@ except Exception as e:
 # ==========================================
 # 3. GLOBAL SIDEBAR (DECISION NAVIGATION)
 # ==========================================
-st.sidebar.title("💎 AI Analytics Platform")
+st.sidebar.title("💎 Analytics Platform")
 st.sidebar.markdown("---")
 st.sidebar.write("**Project Phase:** 6-Week Internship Pipeline")
 app_mode = st.sidebar.selectbox("Choose Analysis Angle:", [
