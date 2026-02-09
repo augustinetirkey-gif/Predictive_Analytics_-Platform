@@ -114,32 +114,124 @@ elif app_mode == "📊 Week 2: Deep EDA & Trends":
         st.plotly_chart(fig_box)
         
 
-# ==========================================
-# ⚙️ TAB 3: WEEK 3 - FEATURE ENGINEERING
-# ==========================================
-elif app_mode == "⚙️ TAB 3: Feature Engineering":
-    st.title("Data Transformation Intelligence")
-    st.write("Preparing raw data for Machine Learning models.")
+elif app_mode == "⚙️ Week 3: Feature Engineering":
+    st.title("🛠️ Data Transformation & Feature Intelligence")
+    st.write("In Week 3, we move from looking at data to 'creating' intelligence for the AI.")
 
+    # --- 1. FEATURE CREATION LOGIC ---
     fe_df = df.copy()
-    # 1. Date Decomposition
+    
+    # Date Decomposition (Time-based Features)
     fe_df['MONTH'] = fe_df['ORDERDATE'].dt.month
     fe_df['YEAR'] = fe_df['ORDERDATE'].dt.year
+    fe_df['QUARTER'] = fe_df['ORDERDATE'].dt.quarter
+    fe_df['DAY_OF_WEEK'] = fe_df['ORDERDATE'].dt.dayofweek
     
-    # 2. Label Encoding
+    # Categorical Encoding
     le = LabelEncoder()
     fe_df['DEAL_CODE'] = le.fit_transform(fe_df['DEALSIZE'])
     fe_df['PROD_CODE'] = le.fit_transform(fe_df['PRODUCTLINE'])
-    
-    st.success("Successfully created: Month/Year signals, Deal Size Encodings, and Product Codes.")
+    fe_df['COUNTRY_CODE'] = le.fit_transform(fe_df['COUNTRY'])
 
-    # Correlation Heatmap
-    st.subheader("Feature Correlation Matrix")
-    corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'DEAL_CODE', 'PROD_CODE']
-    fig_corr, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(fe_df[corr_cols].corr(), annot=True, cmap='coolwarm', ax=ax)
-    st.pyplot(fig_corr)
+    # Feature Scaling (Standardization)
+    scaler = StandardScaler()
+    fe_df['SCALED_SALES'] = scaler.fit_transform(fe_df[['SALES']])
+
+    st.success(f"✅ Created 7 New Predictive Features from your {len(df)} records.")
+
+    # --- 2. MULTI-ANGLE ANALYSIS ---
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        st.subheader("1. Feature Correlation Matrix")
+        st.write("Identifying which engineered features drive revenue.")
+        # We use a larger set of columns for deeper analysis
+        corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']
+        fig_corr, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(fe_df[corr_cols].corr(), annot=True, cmap='RdYlGn', fmt=".2f", ax=ax)
+        st.pyplot(fig_corr)
+        
+
+    with col_b:
+        st.subheader("2. Target Normalization Check")
+        st.write("AI models perform better when data follows a Bell Curve.")
+        # Comparing Raw vs Log-Transformed
+        fig_dist = px.histogram(fe_df, x=np.log1p(fe_df['SALES']), 
+                               nbins=30, title="Log-Normalized Sales Distribution",
+                               color_discrete_sequence=['indianred'])
+        st.plotly_chart(fig_dist, use_container_width=True)
+ elif app_mode == "⚙️ Week 3: Feature Engineering":
+    st.title("🛠️ Data Transformation & Feature Intelligence")
+    st.write("In Week 3, we move from looking at data to 'creating' intelligence for the AI.")
+
+    # --- 1. FEATURE CREATION LOGIC ---
+    fe_df = df.copy()
     
+    # Date Decomposition (Time-based Features)
+    fe_df['MONTH'] = fe_df['ORDERDATE'].dt.month
+    fe_df['YEAR'] = fe_df['ORDERDATE'].dt.year
+    fe_df['QUARTER'] = fe_df['ORDERDATE'].dt.quarter
+    fe_df['DAY_OF_WEEK'] = fe_df['ORDERDATE'].dt.dayofweek
+    
+    # Categorical Encoding
+    le = LabelEncoder()
+    fe_df['DEAL_CODE'] = le.fit_transform(fe_df['DEALSIZE'])
+    fe_df['PROD_CODE'] = le.fit_transform(fe_df['PRODUCTLINE'])
+    fe_df['COUNTRY_CODE'] = le.fit_transform(fe_df['COUNTRY'])
+
+    # Feature Scaling (Standardization)
+    scaler = StandardScaler()
+    fe_df['SCALED_SALES'] = scaler.fit_transform(fe_df[['SALES']])
+
+    st.success(f"✅ Created 7 New Predictive Features from your {len(df)} records.")
+
+    # --- 2. MULTI-ANGLE ANALYSIS ---
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        st.subheader("1. Feature Correlation Matrix")
+        st.write("Identifying which engineered features drive revenue.")
+        # We use a larger set of columns for deeper analysis
+        corr_cols = ['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE', 'COUNTRY_CODE']
+        fig_corr, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(fe_df[corr_cols].corr(), annot=True, cmap='RdYlGn', fmt=".2f", ax=ax)
+        st.pyplot(fig_corr)
+        
+
+    with col_b:
+        st.subheader("2. Target Normalization Check")
+        st.write("AI models perform better when data follows a Bell Curve.")
+        # Comparing Raw vs Log-Transformed
+        fig_dist = px.histogram(fe_df, x=np.log1p(fe_df['SALES']), 
+                               nbins=30, title="Log-Normalized Sales Distribution",
+                               color_discrete_sequence=['indianred'])
+        st.plotly_chart(fig_dist, use_container_width=True)
+        
+
+    # --- 3. ADVANCED STATISTICAL ANGLES ---
+    st.markdown("---")
+    st.subheader("3. Seasonal Revenue Decomposition")
+    
+    # Aggregate data to show the effect of the new 'MONTH' feature
+    seasonal_data = fe_df.groupby('MONTH')['SALES'].mean().reset_index()
+    fig_seasonal = px.area(seasonal_data, x='MONTH', y='SALES', 
+                          title="Mean Sales by Engineered Month Feature",
+                          labels={'SALES': 'Average Revenue ($)'})
+    st.plotly_chart(fig_seasonal, use_container_width=True)
+
+    # --- 4. FEATURE IMPORTANCE (SNEAK PEEK) ---
+    st.subheader("4. Information Gain (Feature Impact)")
+    # Using a quick random forest to show which feature is most "valuable"
+    X_temp = fe_df[['QUANTITYORDERED', 'PRICEEACH', 'MONTH', 'QUARTER', 'DEAL_CODE', 'PROD_CODE']]
+    y_temp = fe_df['SALES']
+    from sklearn.ensemble import ExtraTreesRegressor
+    model_temp = ExtraTreesRegressor()
+    model_temp.fit(X_temp, y_temp)
+    
+    feat_importances = pd.Series(model_temp.feature_importances_, index=X_temp.columns)
+    st.plotly_chart(px.bar(feat_importances, orientation='h', title="Statistical Value of New Features"), use_container_width=True)       
+
+
 
 # ==========================================
 # 🤖 TAB 4 & 5: WEEK 4/5 - AI MODELS
