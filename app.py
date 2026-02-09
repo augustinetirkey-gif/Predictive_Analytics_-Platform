@@ -357,128 +357,96 @@ elif app_mode == "🤖 Week 4 & 5: AI Modeling & Performance":
                 st.session_state.prediction_history = []
                 st.rerun()
 
-
-# ==========================================
-# 🚀 TAB 5: WEEK 6 - BUSINESS DECISION DASHBOARD
-# ==========================================
 elif app_mode == "🚀 Week 6: Strategic Decision Support":
     st.title("🏛️ Business Decision Command Center")
     st.markdown("---")
 
-    # SECTION 1: EXECUTIVE KPIs (The Big Picture)
+    # 1. EXECUTIVE KPI OVERVIEW
+    st.subheader("📌 Current Performance vs. AI Targets")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
     current_sales = df['SALES'].sum()
+    target_sales = current_sales * 1.15
     avg_order = df['SALES'].mean()
-    total_orders = df['ORDERNUMBER'].nunique()
+    
+    kpi1.metric("Current Revenue", f"${current_sales/1e6:.2f}M")
+    kpi2.metric("Projected Target", f"${target_sales/1e6:.2f}M", delta="15% Growth")
+    kpi3.metric("Avg Order Value", f"${avg_order:,.0f}")
+    kpi4.metric("AI Confidence", "92%", delta="Stable")
 
-    kpi1, kpi2, kpi3 = st.columns(3)
-    kpi1.metric("Current Gross Revenue", f"${current_sales/1e6:.2f}M")
-    kpi2.metric("Avg. Order Value", f"${avg_order:,.0f}")
-    kpi3.metric("Total Order Volume", f"{total_orders:,}")
-
-    # SECTION 2: SIMULATION ENGINE (Strategy Levers)
-    st.subheader("🛠️ Strategic Simulation Levers")
-    with st.container():
-        col_sim1, col_sim2, col_sim3 = st.columns([2, 2, 1])
-        with col_sim1:
-            q_change = st.slider("Scale Production/Inventory (%)", 0, 100, 20)
-        with col_sim2:
-            p_change = st.slider("Global Price Optimization (%)", -10, 40, 5)
-        
-        # Calculate Future Impact
-        projected_sales = current_sales * (1 + (q_change/100)) * (1 + (p_change/100))
-        growth = projected_sales - current_sales
-        
-        with col_sim3:
-            st.metric("ROI Forecast", f"+{((growth/current_sales)*100):.1f}%", delta="Target Reachable")
-
-    # SECTION 3: MULTI-REGION STOCK DIRECTIVES (The "Everything" Logic)
+    # 2. INTERACTIVE STRATEGY SIMULATOR
     st.markdown("---")
-    st.subheader("🌍 Global Market Readiness")
+    st.subheader("🛠️ Strategy Simulation: 'What-If' Analysis")
     
-    # Identify top markets for the decision grid
-    market_data = df.groupby('COUNTRY').agg({
-        'SALES': 'sum',
-        'QUANTITYORDERED': 'sum'
-    }).sort_values('SALES', ascending=False).head(6)
+    col_s1, col_s2 = st.columns([1, 2])
+    with col_s1:
+        st.write("**Adjust Growth Levers**")
+        prod_boost = st.slider("Increase Production Volume (%)", 0, 50, 10)
+        price_adj = st.slider("Price Optimization (%)", -10, 20, 5)
+        marketing_spend = st.number_input("Marketing Investment ($)", value=50000, step=5000)
 
-    # Creating a 3-column grid for country-specific decisions
-    cols = st.columns(3)
-    for i, (country, row) in enumerate(market_data.iterrows()):
-        with cols[i % 3]:
-            # Professional Status Card
-            st.info(f"**Market: {country}**")
-            st.write(f"Current Revenue: ${row['SALES']/1e3:.1f}K")
-            
-            # Logic for stock recommendation
-            needed_stock = int(row['QUANTITYORDERED'] * (1 + q_change/100))
-            st.write(f"📈 **Target Stock:** {needed_stock:,} units")
-            
-            # Action Button (Visual only)
-            st.button(f"Approve Logistics for {country}", key=f"btn_{country}")
+    # Simulation Logic
+    simulated_revenue = current_sales * (1 + (prod_boost/100)) * (1 + (price_adj/100))
+    revenue_diff = simulated_revenue - current_sales
+    roi = ((revenue_diff - marketing_spend) / marketing_spend) * 100 if marketing_spend > 0 else 0
 
-    # SECTION 4: STRATEGIC RISKS & OPPORTUNITIES
+    with col_s2:
+        # Comparison Chart
+        comparison_df = pd.DataFrame({
+            "Scenario": ["Current Status", "AI Simulated Strategy"],
+            "Revenue ($)": [current_sales, simulated_revenue]
+        })
+        fig_sim = px.bar(comparison_df, x="Scenario", y="Revenue ($)", 
+                         color="Scenario", text_auto='.2s',
+                         color_discrete_map={"Current Status": "#636EFA", "AI Simulated Strategy": "#EF553B"})
+        st.plotly_chart(fig_sim, use_container_width=True)
+
+    # 3. GLOBAL DECISION MATRIX & ACTION ITEMS
     st.markdown("---")
-    col_risk, col_opp = st.columns(2)
+    col_m1, col_m2 = st.columns([2, 1])
     
-    with col_risk:
-        st.subheader("⚠️ Risk Assessment")
-        st.error(f"**Supply Chain Constraint:** Projected {q_change}% growth may exceed raw material capacity in Q4. Recommend 15% buffer increase.")
+    with col_m1:
+        st.subheader("🌍 Regional Resource Allocation")
+        market_readiness = df.groupby('COUNTRY')['SALES'].sum().reset_index().sort_values('SALES', ascending=False).head(6)
         
-    with col_opp:
-        st.subheader("💡 Expansion Opportunity")
-        st.success(f"**Pricing Power:** A {p_change}% increase is sustainable in high-demand zones. Projected Margin expansion: ${growth/2/1e6:.2f}M.")
-        import streamlit as st
-import pandas as pd
-import plotly.express as px
-from sklearn.linear_model import LinearRegression
-import numpy as np
+        m_cols = st.columns(3)
+        for i, (idx, row) in enumerate(market_readiness.iterrows()):
+            with m_cols[i % 3]:
+                st.info(f"**{row['COUNTRY']}**")
+                st.write(f"Volume: {row['SALES']/1e3:.1f}K")
+                if row['SALES'] > 500000:
+                    st.success("Priority: High")
+                else:
+                    st.warning("Priority: Medium")
+                st.button("Approve Budget", key=f"btn_w6_{row['COUNTRY']}")
 
-# 1. Page Configuration
-st.set_page_config(page_title="Business Decision Dashboard", layout="wide")
-st.title("📊 Predictive Analytics for Business Decisions")
+    with col_m2:
+        st.subheader("🚨 Risk Assessment")
+        if price_adj > 10:
+            st.error("Churn Risk: High pricing may reduce volume by 5%.")
+        if prod_boost > 30:
+            st.warning("Supply Chain: Potential stock bottlenecks in Q4.")
+        st.metric("Estimated ROI", f"{roi:.1f}%")
 
-# 2. Data Loading
-uploaded_file = st.file_uploader("Upload your Business Data (CSV)", type="csv")
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+    # 4. FINAL EXECUTIVE SUMMARY & DOWNLOAD
+    st.markdown("---")
+    st.subheader("📋 Executive Action Plan")
     
-    # Sidebar Filters
-    st.sidebar.header("Filter Options")
-    columns = df.columns.tolist()
-    selected_col = st.sidebar.selectbox("Select Column for Trend Analysis", columns)
-
-    # 3. Key Metrics (KPIs)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Records", len(df))
-    col2.metric("Average Value", round(df[selected_col].mean(), 2) if df[selected_col].dtype in ['int64', 'float64'] else "N/A")
-    col3.metric("Unique Entries", df[selected_col].nunique())
-
-    # 4. Data Visualization
-    st.subheader(f"Trend Analysis: {selected_col}")
-    fig = px.line(df, y=selected_col, title=f"Historical Trend of {selected_col}")
-    st.plotly_chart(fig, use_container_width=True)
-
-    # 5. Simple Predictive Analytics
-    st.divider()
-    st.subheader("🚀 Future Outcome Forecasting")
-    
-    if df[selected_col].dtype in ['int64', 'float64']:
-        # Preparing simple Linear Regression (Index vs Value)
-        X = np.array(range(len(df))).reshape(-1, 1)
-        y = df[selected_col].values
-        
-        model = LinearRegression()
-        model.fit(X, y)
-        
-        # Predict next 5 steps
-        future_steps = np.array(range(len(df), len(df) + 5)).reshape(-1, 1)
-        predictions = model.predict(future_steps)
-        
-        st.write("Based on current trends, the next 5 projected values are:")
-        st.dataframe(pd.DataFrame(predictions, columns=["Projected Value"]))
+    # Prescriptive Logic
+    if roi > 20:
+        action_plan = "🟢 STRATEGY APPROVED: High ROI detected. Proceed with global roll-out."
     else:
-        st.warning("Please select a numerical column to generate a forecast.")
+        action_plan = "🟡 STRATEGY PENDING: Low ROI. Re-evaluate marketing spend vs. price optimization."
+    
+    st.markdown(f"> **Final Recommendation:** {action_plan}")
 
-else:
-    st.info("Please upload a CSV file to get started.")
+    if st.button("📊 Finalize & Export Strategy"):
+        report_data = {
+            "Factor": ["Production Boost", "Price Optimization", "Marketing Spend", "Projected Net Gain", "ROI"],
+            "Value": [f"{prod_boost}%", f"{price_adj}%", f"${marketing_spend:,.0f}", f"${revenue_diff - marketing_spend:,.2f}", f"{roi:.1f}%"]
+        }
+        res_df = pd.DataFrame(report_data)
+        st.table(res_df)
+        
+        csv = res_df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Official Strategy PDF/CSV", data=csv, file_name="Business_Strategy_2026.csv")
